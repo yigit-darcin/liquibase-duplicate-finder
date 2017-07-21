@@ -29,7 +29,7 @@ public class LiquibaseDuplicateFinder extends AbstractMojo {
         final Path path = Paths.get(location);
         final File changelogDirectory = path.toFile();
         if (!changelogDirectory.exists()) {
-            throw new MojoExecutionException("Cannot find the changlog directory");
+            throw new MojoExecutionException("Cannot find the changelog directory");
         }
 
         List<String> filePaths = new ArrayList<>();
@@ -45,26 +45,33 @@ public class LiquibaseDuplicateFinder extends AbstractMojo {
                 List<String> changesetNames = new ArrayList<>();
                 Document doc = dBuilder.parse(path);
                 final Node rootNode = doc.getChildNodes().item(0);
-                if ("databaseChangeLog".equals(rootNode.getNodeName())) {
-                    for (int i = 0; i < rootNode.getChildNodes().getLength(); i++) {
-                        Node node = rootNode.getChildNodes().item(i);
-                        if ("changeSet".equals(node.getNodeName())) {
-                            String changesetId = node.getAttributes().getNamedItem("id").getNodeValue();
-                            String changesetAuthor = node.getAttributes().getNamedItem("author").getNodeValue();
-                            String changesetIdAndAuthor = changesetId + "::" + changesetAuthor;
-                            if (changesetNames.contains(changesetIdAndAuthor)) {
-                                final String message = "Gotcha! shame on you " + changesetAuthor + " for c/p " + changesetId;
-                                getLog().error("****************************************************");
-                                getLog().error("Liquibase Validation Error");
-                                getLog().error(message);
-                                getLog().error("****************************************************");
-                                throw new MojoExecutionException(message);
-                            } else {
-                                changesetNames.add(changesetIdAndAuthor);
-                            }
-                        }
-                    }
+                
+                if (!"databaseChangeLog".equals(rootNode.getNodeName())) {
+                    continue;
                 }
+                    
+                for (int i = 0; i < rootNode.getChildNodes().getLength(); i++) {
+                    Node node = rootNode.getChildNodes().item(i);
+                    if (!"changeSet".equals(node.getNodeName())) {
+                        continue;
+                    }
+                        
+                    String changesetId = node.getAttributes().getNamedItem("id").getNodeValue();
+                    String changesetAuthor = node.getAttributes().getNamedItem("author").getNodeValue();
+                    String changesetIdAndAuthor = changesetId + "::" + changesetAuthor;
+                    if (changesetNames.contains(changesetIdAndAuthor)) {
+                        final String message = "Gotcha! shame on you " + changesetAuthor + " for c/p " + changesetId;
+                        getLog().error("****************************************************");
+                        getLog().error("Liquibase Validation Error");
+                        getLog().error(message);
+                        getLog().error("****************************************************");
+                        throw new MojoExecutionException(message);
+                    } else {
+                        changesetNames.add(changesetIdAndAuthor);
+                    }
+                   
+                }
+                
             }
         } catch (Exception e) {
             e.printStackTrace();
